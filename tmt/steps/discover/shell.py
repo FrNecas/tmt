@@ -11,10 +11,15 @@ import tmt.steps.discover
 class DiscoverShell(tmt.steps.discover.DiscoverPlugin):
     """ Discover available tests from manually provided list """
 
-    def __init__(self, data, step):
-        """ Check supported attributes """
-        super(DiscoverShell, self).__init__(
-            data=data, step=step, name=data['name'])
+    # Supported methods
+    methods = {
+        'shell.tmt': {
+            'summary': 'Manual list of shell tests',
+            'order': 100,
+            },
+        }
+
+    def wake(self):
         # Check provided tests, default to an empty list
         if 'tests' not in self.data:
             self.data['tests'] = []

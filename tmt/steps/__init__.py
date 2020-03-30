@@ -151,17 +151,87 @@ class Step(tmt.utils.Common):
                     pass
 
 
-class Plugin(tmt.utils.Common):
+class PluginIndex(type):
+    """ Plugin metaclass used to register all available plugins """
+
+    def __init__(cls, name, bases, attributes):
+        """ Store all defined methods in the parent class """
+        try:
+            for method, details in cls.methods.items():
+                details['class'] = cls
+                bases[0].methods[method] = details
+        except AttributeError:
+            pass
+
+
+class Plugin(tmt.utils.Common, metaclass=PluginIndex):
     """ Common parent of all step plugins """
 
-    def __init__(self, data, step=None, name=None):
-        """ Store plugin data """
-        super(Plugin, self).__init__(name=name, parent=step)
+    # Default plugin data
+    defaults = dict()
+
+    def __init__(self, step, data):
+        """ Store plugin name, data and parent step """
+
+        # Ensure that plugin data contains name
+        if 'name' not in data:
+            raise GeneralError("Missing 'name' in plugin data.")
+
+        # Store name, data and parent step
+        super(Plugin, self).__init__(parent=step, name=data['name'])
         self.data = data
         self.step = step
 
+    @classmethod
+    def options(how):
+        """ Prepare options for given method """
+        raise NotImplementedError
+
+    @classmethod
+    def delegate(cls, step, data):
+        """
+        Delegate work to the appropriate plugin
+
+        Plugin choice is based on data['how'] and plugin priority.
+        The first matching method with the lowest 'order' wins.
+        """
+
+        # Make sure that 'how' is present
+        try:
+            how = data['how']
+        except KeyError:
+            raise GeneralError('No method defined in data.')
+
+        # Filter matching methods, pick the one with the lowest order
+        for method in sorted(
+                [method for method in cls.methods if method.startswith(how)],
+                key=lambda method: cls.methods[method]['order']):
+            return cls.methods[method]['class'](step, data)
+
+        # Report invalid method
+        raise tmt.utils.SpecificationError(f"Unknown {step} method '{how}'.")
+
+    def get(self, option, default=None):
+        """ Get option from plugin data, user/system config or defaults """
+        # Check plugin data first
+        try:
+            return self.data[option]
+        except KeyError:
+            pass
+
+        # Check user config and system config
+        # TODO
+
+        # Check plugin defaults
+        try:
+            return self.defaults[option]
+        # Otherwise use manually provided default value
+        except KeyError:
+            return default
+
     def wake(self):
         """ Wake up the plugin (override data with command line) """
+        raise NotImplementedError
 
     def go(self):
         """ Go and perform the plugin task """
@@ -170,7 +240,3 @@ class Plugin(tmt.utils.Common):
         # Show name only if there are more steps
         if self.name != 'one':
             self.info('name', self.name, 'green')
-
-    def dump(self):
-        """ Dump current step plugin data """
-        return self.data

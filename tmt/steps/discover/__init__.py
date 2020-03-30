@@ -71,15 +71,7 @@ class Discover(tmt.steps.Step):
 
         # Choose the right plugin and wake it up
         for data in self.data:
-            if data['how'] == 'fmf':
-                from tmt.steps.discover.fmf import DiscoverFmf
-                plugin = DiscoverFmf(data, step=self)
-            elif data['how'] == 'shell':
-                from tmt.steps.discover.shell import DiscoverShell
-                plugin = DiscoverShell(data, step=self)
-            else:
-                raise tmt.utils.SpecificationError(
-                    f"Unknown discover method '{data['how']}'.")
+            plugin = DiscoverPlugin.delegate(self, data)
             self.plugins.append(plugin)
             plugin.wake()
 
@@ -140,10 +132,14 @@ class Discover(tmt.steps.Step):
 class DiscoverPlugin(tmt.steps.Plugin):
     """ Common parent of discover plugins """
 
-    def __init__(self, data, step=None, name=None):
-        """ Basic plugin initialization """
-        super(DiscoverPlugin, self).__init__(data=data, step=step, name=name)
+    # Supported methods
+    methods = {}
 
     def tests(self):
-        """ Return discovered tests """
+        """
+        Return discovered tests
+
+        Each DiscoverPlugin has to implement this method.
+        Should return a list of Test() objects.
+        """
         raise NotImplementedError

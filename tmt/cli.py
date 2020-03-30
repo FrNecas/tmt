@@ -11,6 +11,7 @@ import os
 import fmf
 import tmt
 import tmt.utils
+import tmt.plugins
 import tmt.convert
 import tmt.export
 import tmt.steps
@@ -78,7 +79,7 @@ def force_dry(function):
             help='Force overwriting existing stuff.'),
         click.option(
             '-n', '--dry', is_flag=True,
-            help='No changes, please. Run in dry mode.'),
+            help='Run in dry mode. No changes, please.'),
         ]
 
     for option in reversed(options):
@@ -165,6 +166,9 @@ def main(context, root, **kwargs):
         tmt.Plan.overview(tree)
         tmt.Story.overview(tree)
 
+    # Explore available plugins
+    tmt.plugins.explore()
+
 
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 #  Run
@@ -209,6 +213,10 @@ def discover(context, **kwargs):
     context.obj.steps.add('discover')
     tmt.steps.discover.Discover._save_context(context)
     return 'discover'
+
+#from tmt.steps.discover.fmf import DiscoverFmf
+#for option in DiscoverFmf.options():
+#    discover = option(discover)
 
 
 @run.command()
@@ -865,3 +873,4 @@ def init(context, path, template, force, **kwargs):
         tmt.Test.create('/tests/example', 'shell', tree, force)
         tmt.Plan.create('/plans/example', 'full', tree, force)
         tmt.Story.create('/stories/example', 'full', tree, force)
+
